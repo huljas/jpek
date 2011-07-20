@@ -1,6 +1,7 @@
 package pragmatastic.jpek;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -97,7 +98,8 @@ public class JpekDecoder {
 
 
     private static void readSOI(ByteBuffer buffer) {
-        System.out.println("SOI at " + buffer.position());
+        System.out.println("*** Marker: SOI ***");
+        System.out.println("OFFSET: " + (buffer.position() - 2));
     }
 
     private static void readSOS(ByteBuffer buffer) {
@@ -122,8 +124,9 @@ public class JpekDecoder {
 
     private static void readAPP(int header, ByteBuffer buffer) {
         System.out.println("*** Marker: APP" + (header - APP0) + " ***");
+        System.out.println(String.format("OFFSET: %d", (buffer.position() - 2)));
         int length = 0xffff & buffer.getShort();
-        System.out.println(String.format("  length: %1$d", length));
+        System.out.println(String.format("  length: %d", length));
 
         byte[] bytes = new byte[length - 2];
         buffer.get(bytes);
@@ -132,7 +135,7 @@ public class JpekDecoder {
         byte[] ba = new byte[5];
         buffer.get(ba);
         String id = new String(ba);
-        System.out.println(String.format("  identifier: [%1$s]", id));
+        System.out.println(String.format("  identifier: [%s]", id));
         if (id.equals(JFIF_MARKER)) {
             int major = 0xff & buffer.get();
             int minor = 0xff & buffer.get();
@@ -141,9 +144,9 @@ public class JpekDecoder {
             int yDensity = 0xffff & buffer.getShort();
             int xThumb = 0xff & buffer.get();
             int yThumb = 0xff & buffer.get();
-            System.out.println(String.format("  version = [%1$d.%2$d]", major, minor));
-            System.out.println(String.format("  density = %1$d x %2$d", xDensity, yDensity));
-            System.out.println(String.format("  thumbnail = %1$d x %2$d", xThumb, yThumb));
+            System.out.println(String.format("  version = [%d.%d]", major, minor));
+            System.out.println(String.format("  density = %d x %d", xDensity, yDensity));
+            System.out.println(String.format("  thumbnail = %d x %d", xThumb, yThumb));
         }
     }
 
@@ -152,22 +155,32 @@ public class JpekDecoder {
     }
 
     private static void readDQT(ByteBuffer buffer) {
-        System.out.println("DQT at " + buffer.position());
-
+        System.out.println("*** Marker: DQT ***");
+        System.out.println(String.format("  OFFSET: %d", (buffer.position() - 2)));
         int length = 0xffff & buffer.getShort();
-        buffer = wrap(buffer, length-2);
-        byte bits = buffer.get();
-        int tableId = bits & 0xf;
-        int precision = bits >>> 4;
-        List<Integer> data = new ArrayList<Integer>(64);
-        for (int i = 0; i < QTABLE_SIZE; i++) {
-            data.add(buffer.get(buffer.position() + zigzag[i]) & 0xff);
+        System.out.println("  Table length = " + length);
+        buffer = wrap(buffer, length - 2);
+        while (buffer.hasRemaining()) {
+            int bits = buffer.get();
+            System.out.println("bits: " + Integer.toHexString(bits));
+            int tableId = bits & 0xf;
+            int precision = (bits >>> 4) + 8;
+            System.out.println("  Precision = " + precision + " bits");
+            System.out.println("  Destination ID = " + tableId);
+            List<Integer> data = new ArrayList<Integer>(64);
+            for (int i = 0; i < QTABLE_SIZE; i++) {
+                data.add(buffer.get(buffer.position() + zigzag[i]) & 0xff);
+            }
+            buffer.position(buffer.position() + 64);
+            qTables.put(tableId, data);
+            for (int i = 0; i < 8; i++) {
+                System.out.print("DQT, Row #" + i + " ");
+                for (int j = 0; j < 8; j++) {
+                    System.out.print(" " + data.get(i * 8 + j));
+                }
+                System.out.println();
+            }
         }
-        System.out.println("DQT length " + length);
-        System.out.println("DQT tableId " + tableId);
-        System.out.println("DQT precision " + precision);
-        System.out.println("DQT table " + data);
-        qTables.put(tableId, data);
     }
 
     private static ByteBuffer wrap(ByteBuffer buffer, int length) {
@@ -178,42 +191,44 @@ public class JpekDecoder {
 
 
     private static void readDHT(ByteBuffer buffer) {
-        System.out.println("DHT at " + buffer.position());
+        System.out.println("*** Marker DHT ***");
+        System.out.println("OFFSET: " + (buffer.position() - 2));
+
 //u8	0xff
 //u8	0xc4 (type of segment)
         int length = 0xffff & buffer.getShort();
-        System.out.println("length " + length);
-        byte bits = buffer.get();
-        int classB = bits & 0xf;
-        int tableId = bits >>> 4;
-        System.out.println("class " + classB);
-        System.out.println("tableId " + tableId);
-        List<Integer> depthCounts = new ArrayList<Integer>();
-        int countTotal = 0;
-        for (int i = 0; i < 16; i++) {
-            int count = buffer.get() & 0xff;
-            depthCounts.add(count);
-            countTotal += count;
-        }
-        int remaining = length - 1 - 16;
-        if (countTotal > remaining) {
-            throw new IllegalStateException("Count total > remaining bytes " + countTotal + " > " + remaining);
-        }
-
-        for (int i = 0; i < depthCounts.size(); i++) {
-            int count = depthCounts.get(i);
-            System.out.println("  Codes of length " + (i+1) + ": " + count);
-        }
-        List<List<Integer>> tree = new ArrayList<List<Integer>>();
-        for (int i = 0; i < depthCounts.size(); i++) {
-            int count = depthCounts.get(i);
-            List<Integer> level = new ArrayList<Integer>();
-            tree.add(level);
-            for (int j = 0; j < count; j++) {
-                level.add(buffer.get() & 0xff);
+        System.out.println("Huffman table length = " + length);
+        buffer = wrap(buffer, length - 2);
+        while (buffer.hasRemaining()) {
+            byte bits = buffer.get();
+            int destinationId = bits & 0xf;
+            int clazz = bits >>> 4;
+            System.out.println("Destination ID = " + destinationId);
+            System.out.println("Class = " + clazz);
+            List<Integer> codeLengths = new ArrayList<Integer>();
+            for (int i = 0; i < 16; i++) {
+                int count = buffer.get() & 0xff;
+                codeLengths.add(count);
+            }
+            List<List<Integer>> tree = new ArrayList<List<Integer>>();
+            for (int i = 0; i < codeLengths.size(); i++) {
+                int codeLength = codeLengths.get(i);
+                List<Integer> level = new ArrayList<Integer>();
+                tree.add(level);
+                for (int j = 0; j < codeLength; j++) {
+                    level.add(buffer.get() & 0xff);
+                }
+            }
+            int i = 1;
+            for (List<Integer> codes : tree) {
+                System.out.print("  Codes of length " + i + " bits (" + codes.size() + " total): ");
+                for (int code : codes) {
+                    System.out.print(Integer.toHexString(code) + " ");
+                }
+                System.out.println();
+                i++;
             }
         }
-        System.out.println(tree);
 //u16 be	length of segment
 //4-bitss	class (0 is DC, 1 is AC, more on this later)
 //4-bits	table id
