@@ -211,23 +211,32 @@ public class JpekDecoder {
                 codeLengths.add(count);
             }
             List<List<Integer>> tree = new ArrayList<List<Integer>>();
+            int len = 1;
+            BinaryTree binaryTree = new BinaryTree();
             for (int i = 0; i < codeLengths.size(); i++) {
+                len = len * 2;
                 int codeLength = codeLengths.get(i);
                 List<Integer> level = new ArrayList<Integer>();
                 tree.add(level);
                 for (int j = 0; j < codeLength; j++) {
-                    level.add(buffer.get() & 0xff);
+                    int code = buffer.get() & 0xff;
+                    level.add(code);
+                    binaryTree.addLeaf(code);
+                }
+                if (i < codeLengths.size() - 1) {
+                    binaryTree.fillLevel();
                 }
             }
             int i = 1;
             for (List<Integer> codes : tree) {
                 System.out.print("  Codes of length " + i + " bits (" + codes.size() + " total): ");
                 for (int code : codes) {
-                    System.out.print(Integer.toHexString(code) + " ");
+                    System.out.print("0x" + Integer.toHexString(code) + " ");
                 }
                 System.out.println();
                 i++;
             }
+            System.out.print(binaryTree);
         }
 //u16 be	length of segment
 //4-bitss	class (0 is DC, 1 is AC, more on this later)
