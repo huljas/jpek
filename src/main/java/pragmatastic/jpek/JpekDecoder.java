@@ -3,6 +3,7 @@ package pragmatastic.jpek;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -103,7 +104,64 @@ public class JpekDecoder {
     }
 
     private static void readSOS(ByteBuffer buffer) {
-        System.out.println("SOS at " + buffer.position());
+        System.out.println("*** Marker: SOS (Start of Scan) ***");
+        System.out.println(String.format("OFFSET: %d", (buffer.position() - 2)));
+        int length = 0xffff & buffer.getShort();
+        ByteBuffer orig = buffer;
+        buffer = IOHelper.wrap(buffer, length - 2);
+        int nOfComponents = 0xff & buffer.get();
+        System.out.println(String.format("  length = %d", length));
+        System.out.println(String.format("  number of components = %d", nOfComponents));
+        for (int i = 0; i < nOfComponents; i++) {
+            int componentId = 0xff & buffer.get();
+            int huffTable = 0xff & buffer.get();
+            int acTable = IOHelper.bits(huffTable, 0, 4);
+            int dcTable = IOHelper.bits(huffTable, 4, 4);
+            System.out.println(String.format("  Component %d : Huff table [AC = %d, DC = %d]", componentId, acTable, dcTable));
+        }
+        readScanData(orig);
+
+
+// Marker Identifier       2 bytes      0xff, 0xda identify SOS marker
+//
+//    Length                       2 bytes      This must be equal to 6+2*(number of components in scan).
+//
+//    Number of
+//    Components in scan  1 byte        This must be >= 1 and <=4 (otherwise error), usually 1 or 3
+//
+//    Each component        2 bytes      For each component, read 2 bytes. It contains,
+//                                                         1 byte   Component Id (1=Y, 2=Cb, 3=Cr, 4=I, 5=Q),
+//                                                         1 byte   Huffman table to use :
+//                                                   bit 0..3 : AC table (0..3)
+//                                                               bit 4..7 : DC table (0..3)
+//
+//    Ignorable Bytes          3 bytes      We have to skip 3 bytes.
+
+    }
+
+    private static void readScanData(ByteBuffer buffer) {
+        System.out.println("*** Reading scan data ***");
+        System.out.println(String.format("OFFSET: %d", (buffer.position())));
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream(buffer.remaining());
+        while (buffer.hasRemaining()) {
+            int b = 0xff & buffer.get();
+            if (b == 0xff) {
+                int marker = 0xff & buffer.get();
+                if (marker == 0x00) {
+                    bytes.write(b);
+                } else if (marker == EOI) {
+                    System.out.println("*** Marker EOI ***");
+                    System.out.println(String.format("OFFSET: %d", (buffer.position() - 2)));
+                    break;
+                } else {
+                    throw new IllegalStateException(String.format("Unexpected marker at scan data %x", marker));
+                }
+            } else {
+                bytes.write(b);
+            }
+        }
+        System.out.println(String.format("  Read %d bytes of data", bytes.toByteArray().length));
+        System.out.println(String.format("  Read data: %s", IOHelper.toString(bytes.toByteArray())));
     }
 
     private static void readRST(ByteBuffer buffer) {
@@ -128,10 +186,7 @@ public class JpekDecoder {
         int length = 0xffff & buffer.getShort();
         System.out.println(String.format("  length: %d", length));
 
-        byte[] bytes = new byte[length - 2];
-        buffer.get(bytes);
-        buffer = ByteBuffer.wrap(bytes);
-
+        buffer = IOHelper.wrap(buffer, length - 2);
         byte[] ba = new byte[5];
         buffer.get(ba);
         String id = new String(ba);
@@ -151,15 +206,47 @@ public class JpekDecoder {
     }
 
     private static void readSOF(ByteBuffer buffer) {
-        System.out.println("SOF at " + buffer.position());
+        System.out.println("*** Marker: SOF ***");
+        System.out.println(String.format("  OFFSET: %d", (buffer.position() - 2)));
+        int length = 0xffff & buffer.getShort();
+        System.out.println(String.format("  Segment length = %d", length));
+        buffer = IOHelper.wrap(buffer, length - 2);
+        int precision = 0xff & buffer.get();
+        int height = 0xffff & buffer.getShort();
+        int width = 0xffff & buffer.getShort();
+        int nOfComponents = 0xff & buffer.get();
+        System.out.println(String.format("  Precision = %d", precision));
+        System.out.println(String.format("  Height = %d, Width = %d", height, width));
+        System.out.println(String.format("  Number of components = %d", nOfComponents));
+        for (int i = 0; i < nOfComponents; i++) {
+            int componentId = 0xff & buffer.get();
+            int samplingFactors = 0xff & buffer.get();
+            int qTableNo = 0xff & buffer.get();
+            System.out.println(String.format("  *** Component %d : sampling factor %x Q Table %d", componentId, samplingFactors, qTableNo));
+        }
+
+
+//Data precision                      1 byte     This is in bits/sample, usually 8
+//                                                                        (12 and 16 not supported by most software).
+//
+//          Image height                        2 bytes    This must be > 0
+//
+//          Image Width                        2 bytes    This must be > 0
+//         Number of components        1 byte      Usually 1 = grey scaled, 3 = color YcbCr or YIQ
+//                                                                          4 = color CMYK
+//         Each component                   3 bytes     Read each component data of 3 bytes. It contains,
+//                                                             (component Id(1byte)(1 = Y, 2 = Cb, 3 = Cr, 4 = I, 5 = Q),
+//                                                              sampling factors (1byte) (bit 0-3 vertical., 4-7 horizontal.),
+//                                                             quantization table number (1 byte))
+//
     }
 
     private static void readDQT(ByteBuffer buffer) {
         System.out.println("*** Marker: DQT ***");
         System.out.println(String.format("  OFFSET: %d", (buffer.position() - 2)));
         int length = 0xffff & buffer.getShort();
-        System.out.println("  Table length = " + length);
-        buffer = wrap(buffer, length - 2);
+        System.out.println("  Segment length = " + length);
+        buffer = IOHelper.wrap(buffer, length - 2);
         while (buffer.hasRemaining()) {
             int bits = buffer.get();
             System.out.println("bits: " + Integer.toHexString(bits));
@@ -183,13 +270,6 @@ public class JpekDecoder {
         }
     }
 
-    private static ByteBuffer wrap(ByteBuffer buffer, int length) {
-        byte[] bytes = new byte[length];
-        buffer.get(bytes);
-        return ByteBuffer.wrap(bytes);
-    }
-
-
     private static void readDHT(ByteBuffer buffer) {
         System.out.println("*** Marker DHT ***");
         System.out.println("OFFSET: " + (buffer.position() - 2));
@@ -198,7 +278,7 @@ public class JpekDecoder {
 //u8	0xc4 (type of segment)
         int length = 0xffff & buffer.getShort();
         System.out.println("Huffman table length = " + length);
-        buffer = wrap(buffer, length - 2);
+        buffer = IOHelper.wrap(buffer, length - 2);
         while (buffer.hasRemaining()) {
             byte bits = buffer.get();
             int destinationId = bits & 0xf;
@@ -245,6 +325,8 @@ public class JpekDecoder {
 //array of u8	elements, in order of depth
 
     }
+
+
 
     public static void main(String[] args) throws IOException {
         decode(IOUtils.toByteArray(new FileInputStream("simple0.jpg")));
