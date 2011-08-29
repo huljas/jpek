@@ -33,8 +33,6 @@ public abstract class JpekSegmentDecoder {
 
         @Override
         public void decode(ByteBuffer buffer, JpekImage jpekImage) {
-            debug("*** Marker: APP ***");
-            debug("OFFSET: %d", (buffer.position() - 2));
             int length = 0xffff & buffer.getShort();
             debug("  length: %d", length);
 
@@ -67,8 +65,6 @@ public abstract class JpekSegmentDecoder {
 
         @Override
         public void decode(ByteBuffer buffer, JpekImage jpekImage) {
-            debug("*** Marker: DQT ***");
-            debug("  OFFSET: %d", (buffer.position() - 2));
             int length = 0xffff & buffer.getShort();
             debug("  Segment length = " + length);
             buffer = IOHelper.wrap(buffer, length - 2);
@@ -85,7 +81,7 @@ public abstract class JpekSegmentDecoder {
                 buffer.position(buffer.position() + 64);
                 jpekImage.qTables.put(tableId, data);
                 for (int i = 0; i < 8; i++) {
-                    StringBuilder message = new StringBuilder("DQT, Row #").append(i).append(" ");
+                    StringBuilder message = new StringBuilder("    DQT, Row #").append(i).append(" ");
                     for (int j = 0; j < 8; j++) {
                         message.append(" " + data.get(i * 8 + j));
                     }
@@ -104,8 +100,6 @@ public abstract class JpekSegmentDecoder {
 
         @Override
         public void decode(ByteBuffer buffer, JpekImage jpekImage) {
-            debug("*** Marker: SOF ***");
-            debug("  OFFSET: %d", (buffer.position() - 2));
             int length = 0xffff & buffer.getShort();
             debug("  Segment length = %d", length);
             buffer = IOHelper.wrap(buffer, length - 2);
@@ -134,8 +128,6 @@ public abstract class JpekSegmentDecoder {
 
         @Override
         public void decode(ByteBuffer buffer, JpekImage jpekImage) {
-            debug("*** Marker DHT ***");
-            debug("OFFSET: " + (buffer.position() - 2));
             int length = 0xffff & buffer.getShort();
             debug("Huffman table length = %d", length);
             buffer = IOHelper.wrap(buffer, length - 2);
@@ -192,8 +184,6 @@ public abstract class JpekSegmentDecoder {
 
         @Override
         public void decode(ByteBuffer buffer, JpekImage jpekImage) {
-            debug("*** Marker: SOS (Start of Scan) ***");
-            debug("OFFSET: %d", (buffer.position() - 2));
             int length = 0xffff & buffer.getShort();
             ByteBuffer orig = buffer;
             buffer = IOHelper.wrap(buffer, length - 2);
@@ -211,8 +201,6 @@ public abstract class JpekSegmentDecoder {
         }
 
         private void readScanData(ByteBuffer buffer) {
-            debug("*** Reading scan data ***");
-            debug("OFFSET: %d", (buffer.position()));
             ByteArrayOutputStream bytes = new ByteArrayOutputStream(buffer.remaining());
             while (buffer.hasRemaining()) {
                 int b = 0xff & buffer.get();
@@ -244,8 +232,6 @@ public abstract class JpekSegmentDecoder {
 
         @Override
         public void decode(ByteBuffer buffer, JpekImage jpekImage) {
-            debug("*** Marker: SOI ***");
-            debug("OFFSET: %d", (buffer.position() - 2));
         }
     }
 }

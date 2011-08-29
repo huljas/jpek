@@ -53,8 +53,7 @@ public class JpekDecoder {
         System.out.println("Decoding jpeg from buffer " + buffer);
         for (int i = 0; buffer.position() <= buffer.capacity() - 2; i++) {
             int marker = 0xffff & buffer.getShort();
-            debug("*** Marker: %x ***", marker);
-            debug("*** Position: %x ***", buffer.position() - 2);
+            debug("*** Marker: %x, Position: %x ***", marker, buffer.position() - 2);
             for (JpekSegmentDecoder decoder : JpekSegmentDecoder.DECODERS) {
                 if (decoder.accept(marker)) {
                     decoder.decode(buffer, jpekImage);
