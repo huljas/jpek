@@ -56,6 +56,13 @@ public class IOHelperTest {
     }
 
     @Test
+    public void bitsLeft() {
+        assertEquals(0xf, IOHelper.bitsLeft(0xf0f0f0f0, 0, 4));
+        assertEquals(0xf, IOHelper.bitsLeft(0x0000f0f0, 16, 4));
+
+    }
+
+    @Test
     public void truncateSmallNumber() {
         assertEquals(0, IOHelper.bits(1, 1, 10));
     }

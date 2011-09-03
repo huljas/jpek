@@ -1,6 +1,9 @@
 package pragmatastic.jpek;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author exthulja
@@ -11,6 +14,7 @@ public class BinaryTree {
     public Branch currentBranch;
     public ArrayList<Branch> branches;
     public ArrayList<Leaf> leaves;
+    private HashMap<BinaryString,Integer> codes;
 
     public BinaryTree() {
         this.root = new Branch();
@@ -51,6 +55,16 @@ public class BinaryTree {
         return this;
     }
 
+    public Map<BinaryString, Integer> codes() {
+        if (codes == null) {
+            codes = new HashMap<BinaryString, Integer>();
+            for(Leaf leaf : this.leaves) {
+                codes.put(new BinaryString(leaf.binaryKey()), leaf.code);
+            }
+        }
+        return codes;
+    }
+
     public Branch nextBranch() {
         if (currentBranch.isFilled()) {
             currentBranch = branches.get(currentBranch.index + 1);
@@ -74,7 +88,6 @@ public class BinaryTree {
         }
         return builder.toString();
     }
-
 
     public static class Leaf extends Node {
         public int code;

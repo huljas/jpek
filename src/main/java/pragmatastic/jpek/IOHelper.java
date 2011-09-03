@@ -20,6 +20,13 @@ public class IOHelper {
         return result;
     }
 
+    public static int bitsLeft(int value, int start, int length) {
+        int left = start;
+        int right = 32 - length;
+        int result = (value << left) >>> right;
+        return result;
+    }
+
     public static String toString(byte[] bytes) {
         StringBuilder builder = new StringBuilder();
         builder.append(String.format(" length = %d, data = { ", bytes.length));

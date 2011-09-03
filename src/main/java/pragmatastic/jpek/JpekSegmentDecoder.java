@@ -133,8 +133,8 @@ public abstract class JpekSegmentDecoder {
             buffer = IOHelper.wrap(buffer, length - 2);
             while (buffer.hasRemaining()) {
                 byte bits = buffer.get();
-                int destinationId = bits & 0xf;
-                int clazz = bits >>> 4;
+                int destinationId = IOHelper.bits(bits, 0, 4);
+                int clazz = IOHelper.bits(bits, 4, 4);
                 debug("Destination ID = %d", destinationId);
                 debug("Class = %d", clazz);
                 List<Integer> codeLengths = new ArrayList<Integer>();
@@ -170,6 +170,7 @@ public abstract class JpekSegmentDecoder {
                     i++;
                 }
                 debug(binaryTree.toString());
+                jpekImage.addDHTTree(destinationId, clazz, binaryTree);
             }
         }
     }
@@ -197,10 +198,11 @@ public abstract class JpekSegmentDecoder {
                 int dcTable = IOHelper.bits(huffTable, 4, 4);
                 debug("  Component %d : Huff table [AC = %d, DC = %d]", componentId, acTable, dcTable);
             }
-            readScanData(orig);
+            byte[] scanData = readScanData(orig);
+            jpekImage.scanData = scanData;
         }
 
-        private void readScanData(ByteBuffer buffer) {
+        private byte[] readScanData(ByteBuffer buffer) {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream(buffer.remaining());
             while (buffer.hasRemaining()) {
                 int b = 0xff & buffer.get();
@@ -219,8 +221,10 @@ public abstract class JpekSegmentDecoder {
                     bytes.write(b);
                 }
             }
-            debug("  Read %d bytes of data", bytes.toByteArray().length);
-            debug("  Read data: %s", IOHelper.toString(bytes.toByteArray()));
+            byte[] scanData = bytes.toByteArray();
+            debug("  Read %d bytes of data", scanData.length);
+            debug("  Read data: %s", IOHelper.toString(scanData));
+            return scanData;
         }
     }
 

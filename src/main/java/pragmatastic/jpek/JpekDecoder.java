@@ -40,9 +40,6 @@ public class JpekDecoder {
     };
     public static final int QTABLE_SIZE = 64;
 
-    private static Map<Integer, List<Integer>> qTables = new HashMap<Integer, List<Integer>>();
-
-
     public static void debug(String message, Object ... args) {
         System.out.println(String.format(message, args));
     }
@@ -50,7 +47,6 @@ public class JpekDecoder {
     public static JpekImage decode(byte[] rawImage) {
         JpekImage jpekImage = new JpekImage();
         ByteBuffer buffer = ByteBuffer.wrap(rawImage);
-        System.out.println("Decoding jpeg from buffer " + buffer);
         for (int i = 0; buffer.position() <= buffer.capacity() - 2; i++) {
             int marker = 0xffff & buffer.getShort();
             debug("*** Marker: %x, Position: %x ***", marker, buffer.position() - 2);
@@ -66,5 +62,6 @@ public class JpekDecoder {
 
     public static void main(String[] args) throws IOException {
         decode(IOUtils.toByteArray(new FileInputStream("simple0.jpg")));
+
     }
 }
