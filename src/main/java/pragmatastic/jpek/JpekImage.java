@@ -16,4 +16,16 @@ public class JpekImage {
     public void addDHTTree(int destinationId, int clazz, BinaryTree binaryTree) {
         dhtTrees.put(destinationId + "-" + clazz, binaryTree);
     }
+    
+    public void process() {
+        String binaryString = IOHelper.toBinaryString(scanData);
+        for (int i = 0; i < binaryString.length(); i++) {
+            String key = binaryString.substring(0, i+1);
+            Integer value = dhtTrees.get("0-0").codes().get(new BinaryString(key));
+            if (value != null) {
+                System.out.println("Match: " + value);
+                return;
+            }
+        }
+    }
 }

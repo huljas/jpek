@@ -61,7 +61,10 @@ public class JpekDecoder {
     }
 
     public static void main(String[] args) throws IOException {
-        decode(IOUtils.toByteArray(new FileInputStream("simple0.jpg")));
-
+        JpekImage image = decode(IOUtils.toByteArray(new FileInputStream("simple0.jpg")));
+        System.out.println("DHTTrees: " + image.dhtTrees);
+        System.out.println("QTables: " + image.qTables);
+        System.out.println("scandata: " + image.scanData);
+        image.process();
     }
 }

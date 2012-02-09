@@ -59,7 +59,6 @@ public class IOHelperTest {
     public void bitsLeft() {
         assertEquals(0xf, IOHelper.bitsLeft(0xf0f0f0f0, 0, 4));
         assertEquals(0xf, IOHelper.bitsLeft(0x0000f0f0, 16, 4));
-
     }
 
     @Test
@@ -71,5 +70,13 @@ public class IOHelperTest {
     public void getHigherBits() {
         assertEquals(1, IOHelper.bits(17, 4, 4));
         assertEquals(1, IOHelper.bits(17, 4, 8));
+    }
+    
+    @Test
+    public void bytesToBinaryString() {
+        assertEquals("00000000", IOHelper.toBinaryString(new byte[]{0x00}));
+        assertEquals("0000000000000001", IOHelper.toBinaryString(new byte[]{0x00, 0x01}));
+        assertEquals("0000000000000010", IOHelper.toBinaryString(new byte[]{0x00, 0x02}));
+        assertEquals("", IOHelper.toBinaryString(new byte[]{(byte)(0xfc)}));
     }
 }

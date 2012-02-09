@@ -1,5 +1,7 @@
 package pragmatastic.jpek;
 
+import org.apache.commons.lang.StringUtils;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -34,6 +36,15 @@ public class IOHelper {
             builder.append(String.format("%x ", b));
         }
         builder.append("}");
+        return builder.toString();
+    }
+
+    public static String toBinaryString(byte[] bytes) {
+        StringBuilder builder = new StringBuilder();
+        for (byte b : bytes) {
+            String s = Integer.toBinaryString(0xff & b);
+            builder.append(StringUtils.repeat("0", 8 - s.length())).append(s);
+        }
         return builder.toString();
     }
 }
