@@ -3,6 +3,9 @@ package pragmatastic.jpek;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -59,12 +62,48 @@ public class JpekDecoder {
         }
         return jpekImage;
     }
+    
+    public static int decodeDC(String binary) {
+        int len = binary.length();
+        if (len == 0) return 0;
+        else {
+            int max = Integer.parseInt(StringUtils.repeat("1", len), 2);
+            int value = Integer.parseInt(binary, 2);
+            if (binary.startsWith("0")) return value - max;
+            else return value;
+        }
+    }
+    
+    public static int colorConvert(int[] ycbcr) {
+        int r = Math.round(1 * ycbcr[0] + 0 * ycbcr[1] + 1.402f * ycbcr[2]);
+        int g = Math.round(1 * ycbcr[0] - 0.344136f * ycbcr[1] - 0.714136f * ycbcr[2]);
+        int b = Math.round(1 * ycbcr[0] + 1.772f * ycbcr[1] + 0 * ycbcr[2]);
+        System.out.println("RGB:" + r + "," + g + "," + b);
+        return r * 256 * 256 + g * 256 + b;
+    }
 
     public static void main(String[] args) throws IOException {
         JpekImage image = decode(IOUtils.toByteArray(new FileInputStream("simple0.jpg")));
         System.out.println("DHTTrees: " + image.dhtTrees);
         System.out.println("QTables: " + image.qTables);
         System.out.println("scandata: " + image.scanData);
-        image.process();
+        final BufferedImage result = image.process();
+
+        JFrame frame = new JFrame("Jpek Decoder");
+        frame.setMinimumSize(new Dimension(200, 120));
+        frame.getContentPane().setLayout(new BorderLayout());
+        JPanel panel = new JPanel() {
+            @Override
+            public void paint(Graphics g) {
+                g.setColor(new Color(128, 128, 150));
+                g.fillRect(0, 0, this.getWidth(), this.getHeight());
+                g.drawImage(result, this.getWidth() / 2 - result.getWidth() / 2, this.getHeight() / 2 - result.getHeight() / 2, null);
+            }
+        };
+        panel.setMinimumSize(new Dimension(300, 200));
+        panel.setBackground(Color.BLUE);
+        frame.getContentPane().add(panel, BorderLayout.CENTER);
+        frame.pack();
+        frame.setVisible(true);
     }
 }

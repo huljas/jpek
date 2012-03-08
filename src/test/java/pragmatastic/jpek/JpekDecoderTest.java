@@ -35,4 +35,18 @@ public class JpekDecoderTest {
         assertEquals(0x7f, 0xff & jpekImage.scanData[7]);
     }
 
+    
+    @Test
+    public void decodeDC() {
+        assertEquals(0, JpekDecoder.decodeDC(""));
+        assertEquals(-1, JpekDecoder.decodeDC("0"));
+        assertEquals(1, JpekDecoder.decodeDC("1"));
+        assertEquals(-3, JpekDecoder.decodeDC("00"));
+        assertEquals(-2, JpekDecoder.decodeDC("01"));
+        assertEquals(2, JpekDecoder.decodeDC("10"));
+        assertEquals(3, JpekDecoder.decodeDC("11"));
+        assertEquals(-8, JpekDecoder.decodeDC("0111"));
+        assertEquals(5, JpekDecoder.decodeDC("101"));
+
+    }
 }
